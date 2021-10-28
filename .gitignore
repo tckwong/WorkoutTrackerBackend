@@ -1,0 +1,10 @@
+dbcreds.py
+venv/
+
+# App generated dir / files
+__pycache__/
+.vscode/
+
+# Misc files use for testing
+archive.txt
+testfunc.py
