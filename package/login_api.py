@@ -4,6 +4,7 @@ import mariadb
 import dbcreds
 import json
 import datetime
+import bcrypt
 
 class MariaDbConnection:    
     def __init__(self):
@@ -72,25 +73,25 @@ def validate_data(mydict, data):
 def login_user():
     data = request.json
     requirements = [
-            {   'name': 'email',
-                'datatype': str,
-                'maxLength': 50,
-                'required': True
-            },
-            {   'name': 'password',
-                'datatype': str,
-                'maxLength': 50,
-                'required': True
-            },
-        ]
+        {   'name': 'email',
+            'datatype': str,
+            'maxLength': 50,
+            'required': True
+        },
+        {   'name': 'password',
+            'datatype': str,
+            'maxLength': 50,
+            'required': True
+        },
+    ]
     try:
         check_data_required(requirements,data)
+        validate_data(requirements,data)
+        
     except RequiredDataNull:
         return Response("Missing required data in your input!",
                         mimetype="text/plain",
                         status=400)
-    try:
-        validate_data(requirements,data)
     except TypeError:
         return Response("Incorrect datatype was used",
                         mimetype="text/plain",
@@ -110,19 +111,23 @@ def login_user():
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
+        cnnct_to_db.cursor.execute("SELECT password FROM user WHERE email=?",[client_email])
+        matching_pw = cnnct_to_db.cursor.fetchone()
+        matching_pw = matching_pw[0].encode()
 
-        cnnct_to_db.cursor.execute("SELECT * FROM user WHERE email=? and password=?",[client_email,client_password])
-        match = cnnct_to_db.cursor.fetchone()
-
-        if match == None:
-            cnnct_to_db.endConn()
-            return Response("No matching login combination",
-                            mimetype="plain/text",
-                            status=400)
+        if (bcrypt.checkpw(client_password.encode(), matching_pw)):
+            print("This is the correct password!")
         else:
-            client_id = match[0]
-            client_username = match[1]
-            client_email = match[2]
+            cnnct_to_db.endConn()
+            return Response("Incorrect login combination",
+                        mimetype="text/plain",
+                        status=400)
+
+        cnnct_to_db.cursor.execute("SELECT * FROM user WHERE email=?",[client_email])
+        matching_info = cnnct_to_db.cursor.fetchone()
+        client_id = matching_info[0]
+        client_username = matching_info[1]
+        client_email = matching_info[2]
             
     except ConnectionError:
         cnnct_to_db.endConn()
@@ -144,6 +149,7 @@ def login_user():
     import uuid
     generateUuid = uuid.uuid4().hex
     str(generateUuid)
+
     try:
         #get current date and time
         cur_datetime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
@@ -171,7 +177,6 @@ def login_user():
         "email": client_email,
         "username": client_username,
         "loginToken": client_token,
-
     }
     return Response(json.dumps(resp),
                                 mimetype="application/json",
