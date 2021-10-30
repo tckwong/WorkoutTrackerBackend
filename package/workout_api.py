@@ -374,7 +374,7 @@ def delete_workout():
             raise ValueError
         
         cnnct_to_db.endConn()
-        return Response("Sucessfully deleted user",
+        return Response("Sucessfully deleted workout",
                             mimetype="text/plain",
                             status=204)
     except ConnectionError:
