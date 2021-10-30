@@ -216,122 +216,122 @@ def create_new_user():
     finally:
         cnnct_to_db.endConn()
 
-# def update_user_info():
-#     data = request.json
+def update_user_info():
+    data = request.json
 
-#     requirements = [
-#             {   'name': 'loginToken',
-#                 'datatype': str,
-#                 'maxLength': 32,
-#                 'required': True
-#             },  
-#             {   'name': 'username',
-#                 'datatype': str,
-#                 'maxLength': 50,
-#                 'required': False
-#             },
-#             {   'name': 'email',
-#                 'datatype': str,
-#                 'maxLength': 50,
-#                 'required': False
-#             },
-#             {   'name': 'password',
-#                 'datatype': str,
-#                 'maxLength': 50,
-#                 'required': False
-#         },
-#     ]
+    requirements = [
+            {   'name': 'loginToken',
+                'datatype': str,
+                'maxLength': 32,
+                'required': True
+            },  
+            {   'name': 'username',
+                'datatype': str,
+                'maxLength': 50,
+                'required': False
+            },
+            {   'name': 'email',
+                'datatype': str,
+                'maxLength': 50,
+                'required': False
+            },
+            {   'name': 'password',
+                'datatype': str,
+                'maxLength': 50,
+                'required': False
+        },
+    ]
 
-#     try:
-#         check_data_required(requirements,data)
-#     except RequiredDataNull:
-#         return Response("Missing required data in your input!",
-#                         mimetype="text/plain",
-#                         status=400)
-#     try:
-#         validate_data(requirements,data)
-#     except TypeError:
-#         return Response("Incorrect datatype was used",
-#                         mimetype="text/plain",
-#                         status=400)
-#     except ValueError:
-#         return Response("Please check your inputs. An error was found with your data",
-#                         mimetype="text/plain",
-#                         status=400)
+    try:
+        check_data_required(requirements,data)
+    except RequiredDataNull:
+        return Response("Missing required data in your input!",
+                        mimetype="text/plain",
+                        status=400)
+    try:
+        validate_data(requirements,data)
+    except TypeError:
+        return Response("Incorrect datatype was used",
+                        mimetype="text/plain",
+                        status=400)
+    except ValueError:
+        return Response("Please check your inputs. An error was found with your data",
+                        mimetype="text/plain",
+                        status=400)
     
-#     client_loginToken = data.get('loginToken')
+    client_loginToken = data.get('loginToken')
     
-#     try:
-#         cnnct_to_db = MariaDbConnection()
-#         cnnct_to_db.connect()
-#         cnnct_to_db.cursor.execute("SELECT user.id FROM user INNER JOIN user_session ON user_session.user_id = user.id WHERE user_session.loginToken =?", [client_loginToken])
-#         id_match = cnnct_to_db.cursor.fetchone()
-#         # Check if a matching user + loginToken was found. Return error if nothing was found
-#         if id_match == None:
-#             cnnct_to_db.endConn()
-#             return Response("Please check your inputs. No matching user / loginToken combination",
-#                         mimetype="text/plain",
-#                         status=400)
-#     except ConnectionError:
-#         cnnct_to_db.endConn()
-#         print("Error while attempting to connect to the database")
-#         return Response("Error while attempting to connect to the database",
-#                                 mimetype="text/plain",
-#                                 status=444)  
-#     except mariadb.DataError:
-#         cnnct_to_db.endConn()
-#         print("Something wrong with your data")
-#         return Response("Something wrong with your data",
-#                                 mimetype="text/plain",
-#                                 status=400)
-#     try:
-#         for key in data:
-#             result = data[key]
-#             if (key != 'loginToken'):
-#                 if (key == "email"):
-#                     cnnct_to_db.cursor.execute("UPDATE user SET email =? WHERE user.id=?",[result,id_match[0]])
-#                 elif (key == "username"):
-#                     cnnct_to_db.cursor.execute("UPDATE user SET username =? WHERE user.id=?",[result,id_match[0]])
-#                 else:
-#                     print("Error happened with inputs")
+    try:
+        cnnct_to_db = MariaDbConnection()
+        cnnct_to_db.connect()
+        cnnct_to_db.cursor.execute("SELECT user.id FROM user INNER JOIN user_session ON user_session.user_id = user.id WHERE user_session.loginToken =?", [client_loginToken])
+        id_match = cnnct_to_db.cursor.fetchone()
+        # Check if a matching user + loginToken was found. Return error if nothing was found
+        if id_match == None:
+            cnnct_to_db.endConn()
+            return Response("Please check your inputs. No matching user / loginToken combination",
+                        mimetype="text/plain",
+                        status=400)
+    except ConnectionError:
+        cnnct_to_db.endConn()
+        print("Error while attempting to connect to the database")
+        return Response("Error while attempting to connect to the database",
+                                mimetype="text/plain",
+                                status=444)  
+    except mariadb.DataError:
+        cnnct_to_db.endConn()
+        print("Something wrong with your data")
+        return Response("Something wrong with your data",
+                                mimetype="text/plain",
+                                status=400)
+    try:
+        for key in data:
+            result = data[key]
+            if (key != 'loginToken'):
+                if (key == "email"):
+                    cnnct_to_db.cursor.execute("UPDATE user SET email =? WHERE user.id=?",[result,id_match[0]])
+                elif (key == "username"):
+                    cnnct_to_db.cursor.execute("UPDATE user SET username =? WHERE user.id=?",[result,id_match[0]])
+                else:
+                    print("Error happened with inputs")
 
-#                 if(cnnct_to_db.cursor.rowcount == 1):
-#                     cnnct_to_db.conn.commit()
-#                 else:
-#                     return Response("Failed to update",
-#                                     mimetype="text/plain",
-#                                     status=400)
-#             else:
-#                 continue
+                if(cnnct_to_db.cursor.rowcount == 1):
+                    cnnct_to_db.conn.commit()
+                else:
+                    return Response("Failed to update",
+                                    mimetype="text/plain",
+                                    status=400)
+            else:
+                continue
         
-#         cnnct_to_db.cursor.execute("SELECT * FROM user WHERE id=?", [id_match[0]])
-#         updated_user = cnnct_to_db.cursor.fetchone()
+        cnnct_to_db.cursor.execute("SELECT * FROM user WHERE id=?", [id_match[0]])
+        updated_user = cnnct_to_db.cursor.fetchone()
         
-#         resp =  {'userId': updated_user[0],
-#                 'username': updated_user[1],
-#                 'email' : updated_user[3],
-#                 }
-#         cnnct_to_db.endConn()
-#         return Response(json.dumps(resp),
-#                         mimetype="application/json",
-#                         status=200)
-#     except ConnectionError:
-#         cnnct_to_db.endConn()
-#         return Response("Error while attempting to connect to the database",
-#                                     mimetype="text/plain",
-#                                     status=400)
-#     except mariadb.DataError:
-#         cnnct_to_db.endConn()
-#         print("Something wrong with your data")
-#         return Response("Something wrong with your data",
-#                         mimetype="text/plain",
-#                         status=400)
-#     except mariadb.IntegrityError:
-#         cnnct_to_db.endConn()
-#         print("Something wrong with your data")
-#         return Response("Something wrong with your data",
-#                         mimetype="text/plain",
-#                         status=400)
+        resp =  {'userId': updated_user[0],
+                'username': updated_user[1],
+                'email' : updated_user[3],
+                }
+        cnnct_to_db.endConn()
+        return Response(json.dumps(resp),
+                        mimetype="application/json",
+                        status=200)
+    except ConnectionError:
+        cnnct_to_db.endConn()
+        return Response("Error while attempting to connect to the database",
+                                    mimetype="text/plain",
+                                    status=400)
+    except mariadb.DataError:
+        cnnct_to_db.endConn()
+        print("Something wrong with your data")
+        return Response("Something wrong with your data",
+                        mimetype="text/plain",
+                        status=400)
+    except mariadb.IntegrityError:
+        cnnct_to_db.endConn()
+        print("Something wrong with your data")
+        return Response("Something wrong with your data",
+                        mimetype="text/plain",
+                        status=400)
 
 def delete_user():                    
     data = request.json
@@ -426,8 +426,7 @@ def users_api():
     elif (request.method == 'POST'):
         return create_new_user()    
     elif (request.method == 'PATCH'):
-        # return update_user_info()
-        pass
+        return update_user_info()
     elif (request.method == 'DELETE'):
         return delete_user()
     else:
