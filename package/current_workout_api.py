@@ -69,7 +69,7 @@ def validate_data(mydict, data):
         else:
             raise ValueError
 
-def get_exercises():
+def get_cur_workout():
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
@@ -82,11 +82,10 @@ def get_exercises():
     params_id = request.args.get("workoutId")
 
     if (params_id is None):
-        cnnct_to_db.endConn()
-        return Response("Get api requires params",
-                                    mimetype="text/plain",
-                                    status=400)
-    
+        return Response(json.dumps("Please provide a 'workoutId'"),
+                                mimetype="text/plain",
+                                status=400)
+
     elif (params_id is not None):
         try:
             params_id = int(request.args.get("workoutId"))
@@ -97,22 +96,20 @@ def get_exercises():
                                         status=400)
     
         if ((0< params_id<9999999)):
-            # Grab all exercises for the workoutId
-            cnnct_to_db.cursor.execute("SELECT * FROM exercise INNER JOIN workout ON exercise.workout_id = workout.id WHERE workout_id =?", [params_id])
-            workoutIdMatch = cnnct_to_db.cursor.fetchall()
+            cnnct_to_db.cursor.execute("SELECT * FROM exercise INNER JOIN workout ON exercise.workout_id = workout.id WHERE workout.id =?", [params_id])
+            cur_workout_data = cnnct_to_db.cursor.fetchall()
             list = []
             content = {}
-            for result in workoutIdMatch:
-                content = {
+            for result in cur_workout_data:
+                content = { 
+                        'workoutId': result[5],
                         'exerciseId': result[0],
-                        'exerciseName': result[1],
-                        'reps': result[2],
+                        'workoutTitle' : result[9],
+                        'exerciseName' : result[1],
+                        'reps' : result[2],
                         'sets' : result[3],
                         'weight' : result[4],
-                        'workout_id' : result[5],
-                        'completed' : result[6],
-                        'user_id' : result[7],
-                        'workoutTitle': result[8]
+                        'created_on': result[10]
                         }
                 list.append(content)
             cnnct_to_db.endConn()
@@ -126,24 +123,24 @@ def get_exercises():
                                     mimetype="application/json",
                                     status=200)
 
-def post_exercises():
+def post_workout():
     data = request.json
-    print(data)
     # data is array object of dictionaries
+    print(data)
     client_loginToken = data[0].get('loginToken')
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
 
         #check loginToken exists and is logged in
-        cnnct_to_db.cursor.execute("SELECT user_id FROM user_session WHERE user_session.loginToken =?", [client_loginToken])
-        session_match = cnnct_to_db.cursor.fetchone()
-        #check for a row match check if user is loggeds in
-        if session_match == None:
-            return Response("No matching results were found",
-                                mimetype="text/plain",
-                                status=400)
-        db_userId = session_match[0]
+        # cnnct_to_db.cursor.execute("SELECT user_id FROM user_session WHERE user_session.loginToken =?", [client_loginToken])
+        # session_match = cnnct_to_db.cursor.fetchone()
+        # #check for a row match check if user is loggeds in
+        # if session_match == None:
+        #     return Response("No matching results were found",
+        #                         mimetype="text/plain",
+        #                         status=400)
+        # db_userId = session_match[0]
 
         cnnct_to_db.cursor.execute("SELECT exercise_name FROM exercise INNER JOIN workout ON workout_id = workout.id WHERE workout.id=?",[data[0].get('workoutId')])
         all_exercises = cnnct_to_db.cursor.fetchall()
@@ -203,50 +200,18 @@ def post_exercises():
     finally:
         cnnct_to_db.endConn()
 
-    # requirements = [
-    #     {   'name': 'loginToken',
-    #         'datatype': str,
-    #         'maxLength': 32,
-    #         'required': True
-    #     },
-    #     {   
-    #         'name': 'reps',
-    #         'datatype': int,
-    #         'maxLength': 10,
-    #         'required': False
-    #     },
-    #     {   
-    #         'name': 'sets',
-    #         'datatype': int,
-    #         'maxLength': 10,
-    #         'required': False
-    #     },
-    #     {   
-    #         'name': 'weight',
-    #         'datatype': int,
-    #         'maxLength': 10,
-    #         'required': False
-    #     },
-    #     {   
-    #         'name': 'completed',
-    #         'datatype': int,
-    #         'maxLength': 10,
-    #         'required': True
-    #     },
-    # ]
 
-    # validate_data(requirements,data)
-    # check_data_required(requirements,data)
 
-    # client_loginToken = data.get('loginToken')
-    # client_exercise_name = data.get('exerciseName')
-    # client_reps = data.get('reps')
-    # client_sets = data.get('sets')
-    # client_weight = data.get('weight')
-    # client_workout_id = data.get('workoutId')
-    # client_completed = data.get('completed')
 
-def delete_exercise():
+
+
+
+
+
+
+
+
+def patch_workout():
     data = request.json
     requirements = [
         {   'name': 'loginToken',
@@ -255,12 +220,109 @@ def delete_exercise():
             'required': True
         },
         {   
-            'name': 'exerciseId',
+            'name': 'workoutId',
+            'datatype': int,
+            'maxLength': 2,
+            'required': True
+        },
+        {   
+            'name': 'title',
+            'datatype': str,
+            'maxLength': 40,
+            'required': False
+        },
+        {
+            'name': 'completed',
+            'datatype': int,
+            'maxLength': 1,
+            'required': False
+        }
+    ]
+    # "validate_data(requirements,data)
+    # check_data_required(requirements,data)"
+
+    client_loginToken = data.get('loginToken')
+    client_workoutId = data.get('workoutId')
+    client_title = data.get('title')
+    client_completed = data.get('completed')
+    
+    try:
+        cnnct_to_db = MariaDbConnection()
+        cnnct_to_db.connect()
+        #Check for workout ownership
+        cnnct_to_db.cursor.execute("SELECT user.id,title,created_on,completed,completed_on from user_session INNER JOIN user ON user_session.user_id = user.id INNER JOIN workout ON workout.user_id = user.id WHERE user_session.loginToken =? AND workout.id=?", [client_loginToken,client_workoutId])
+        info_match = cnnct_to_db.cursor.fetchone()
+        if not info_match:
+            cnnct_to_db.endConn()
+            return Response("No matching results were found",
+                                mimetype="text/plain",
+                                status=400)
+
+        for key in data:
+            if (key != 'loginToken' and key != 'workoutId'):
+                if (key == "title"):
+                    cnnct_to_db.cursor.execute("UPDATE workout SET title=? WHERE id=?",[client_title,client_workoutId])
+                elif (key == "completed"):
+                    cur_date = datetime.datetime.now().strftime('%Y-%m-%d')
+                    cnnct_to_db.cursor.execute("UPDATE workout SET completed=? AND completed_on=? WHERE id=?",[client_completed,cur_date,client_workoutId])
+                else:
+                    print("Error happened with inputs")
+
+                if(cnnct_to_db.cursor.rowcount == 1):
+                    cnnct_to_db.conn.commit()
+                else:
+                    return Response("Failed to update",
+                                    mimetype="text/plain",
+                                    status=400)
+            else:
+                continue
+        cnnct_to_db.cursor.execute("SELECT * FROM workout WHERE id=?", [client_workoutId])
+        updated_workout = cnnct_to_db.cursor.fetchone()
+        cnnct_to_db.endConn()
+        
+        resp = {
+            "workoutId" : updated_workout[0],
+            "title" : updated_workout[1],
+            "completed" : updated_workout[3]
+        }
+
+        return Response(json.dumps(resp),
+                        mimetype="application/json",
+                        status=200)
+    except ConnectionError:
+        cnnct_to_db.endConn()
+        print("Error while attempting to connect to the database")
+        return Response("Error while attempting to connect to the database",
+                        mimetype="text/plain",
+                        status=444)  
+    except mariadb.DataError:
+        cnnct_to_db.endConn()
+        print("Something wrong with your data")
+        return Response("Something wrong with your data",
+                        mimetype="text/plain",
+                        status=400)
+    except mariadb.IntegrityError:
+        cnnct_to_db.endConn()
+        print("Something wrong with your data")
+        return Response("Something wrong with your data",
+                        mimetype="text/plain",
+                        status=400)
+def delete_workout():
+    data = request.json
+    requirements = [
+        {   'name': 'loginToken',
+            'datatype': str,
+            'maxLength': 32,
+            'required': True
+        },
+        {   
+            'name': 'workoutId',
             'datatype': int,
             'maxLength': 2,
             'required': True
         },
     ]
+
     try:
         check_data_required(requirements,data)
         validate_data(requirements,data)
@@ -283,17 +345,17 @@ def delete_exercise():
                         status=400)
 
     client_loginToken = data.get('loginToken')
-    client_exerciseId = data.get('exerciseId')
+    client_workoutId = data.get('workoutId')
 
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
-        # Select the exerciseId
-        cnnct_to_db.cursor.execute("SELECT exercise.id from user_session INNER JOIN user ON user_session.user_id = user.id INNER JOIN exercise ON exercise.user_id = user.id WHERE user_session.loginToken =? AND exercise.id=?", [client_loginToken,client_exerciseId])
+        # Select the workoutId
+        cnnct_to_db.cursor.execute("SELECT workout.id from user_session INNER JOIN user ON user_session.user_id = user.id INNER JOIN workout ON workout.user_id = user.id WHERE user_session.loginToken =? AND workout.id=?", [client_loginToken,client_workoutId])
         id_match = cnnct_to_db.cursor.fetchone()
         if id_match != None:
             id_match = id_match[0]
-            cnnct_to_db.cursor.execute("DELETE FROM exercise WHERE id=?",[id_match])
+            cnnct_to_db.cursor.execute("DELETE FROM workout WHERE id=?",[id_match])
             if(cnnct_to_db.cursor.rowcount == 1):
                 cnnct_to_db.conn.commit()
             else:
@@ -304,7 +366,7 @@ def delete_exercise():
             raise ValueError
         
         cnnct_to_db.endConn()
-        return Response("Sucessfully deleted exercise",
+        return Response("Sucessfully deleted workout",
                             mimetype="text/plain",
                             status=204)
     except ConnectionError:
@@ -321,20 +383,20 @@ def delete_exercise():
                         status=400)
     except ValueError:
         cnnct_to_db.endConn()
-        print("Incorrect loginToken and password combination")
+        print("No existing loginToken was found")
         return Response("Incorrect loginToken and password combination",
                         mimetype="text/plain",
                         status=400)
 
-@app.route('/api/exercises', methods=['GET','POST','PATCH','DELETE'])
-def exercise_api():
+@app.route('/api/current-workout', methods=['GET','POST','PATCH','DELETE'])
+def current_workout_api():
     if (request.method == 'GET'):
-        return get_exercises()
+        return get_cur_workout()
     elif (request.method == 'POST'):
-        return post_exercises()
+        pass
     elif (request.method == 'PATCH'):
         pass
     elif (request.method == 'DELETE'):
-        return delete_exercise()
+        pass
     else:
         print("Something went wrong with the login API.")
