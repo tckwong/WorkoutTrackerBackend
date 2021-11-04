@@ -4,7 +4,6 @@ import mariadb
 import dbcreds
 import json
 import datetime
-import bcrypt
 
 class MariaDbConnection:    
     def __init__(self):
@@ -72,43 +71,22 @@ def validate_data(mydict, data):
 
 def post_session():
     data = request.json
-    requirements = [
-        
-    ]
-    # try:
-    #     check_data_required(requirements,data)
-    #     validate_data(requirements,data)
-        
-    # except RequiredDataNull:
-    #     return Response("Missing required data in your input!",
-    #                     mimetype="text/plain",
-    #                     status=400)
-    # except TypeError:
-    #     return Response("Incorrect datatype was used",
-    #                     mimetype="text/plain",
-    #                     status=400)
-    # except ValueError:
-    #     return Response("Please check your inputs. An error was found with your data",
-    #                     mimetype="text/plain",
-    #                     status=400)
-    # except DataOutofBounds:
-    #     return Response("Please check your inputs. Data is out of bounds",
-    #                     mimetype="text/plain",
-    #                     status=400)
-    
-
     #Create a session token
     #Create Start Time
-    
+    client_loginToken = data.get('loginToken')
     client_workoutId = data.get('workoutId')
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
-        #find the userID from database
-        cnnct_to_db.cursor.execute("SELECT workout.user_id FROM workout_session INNER JOIN workout ON workout_session.workout_id = workout.id WHERE workout.id=?", [client_workoutId])
-        db_userID = cnnct_to_db.cursor.fetchone()
-        db_userID = db_userID[0]
-        print(db_userID)
+        #Check loginToken
+        cnnct_to_db.cursor.execute("SELECT loginToken FROM user_session WHERE loginToken=?",[client_loginToken])
+        match = cnnct_to_db.cursor.fetchone()
+        #Only returns one row, so only one combination is valid
+        if match == None:
+            return Response("User login invalid",
+                            mimetype="plain/text",
+                            status=400)
+
     except ConnectionError:
         cnnct_to_db.endConn()
         return Response("Error while attempting to connect to the database",
@@ -133,12 +111,21 @@ def post_session():
     try:
         #get current date and time
         started_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        cnnct_to_db.cursor.execute("INSERT INTO  workout_session(started_at,session_token,completed,workout_id,user_id) VALUES(?,?,?,?,?)",[started_at,generateUuid,0,client_workoutId,db_userID])
+        cnnct_to_db.cursor.execute("INSERT INTO workout_session(started_at,session_token,user_id) VALUES(?,?,?)",[started_at,generateUuid,data.get('userId')])
         cnnct_to_db.conn.commit()
 
-        cnnct_to_db.cursor.execute("SELECT * FROM workout_session WHERE workout_id=? AND completed=0 ORDER BY id DESC LIMIT 1",[client_workoutId])
+        cnnct_to_db.cursor.execute("SELECT * FROM workout_session WHERE user_id=? ORDER BY id DESC LIMIT 1",[data.get('userId')])
         result = cnnct_to_db.cursor.fetchone()
 
+        resp = {
+            "sessionId": result[0],
+            "startedAt": result[1],
+            "sessionToken": result[2],
+            "userId": result[4]
+        }
+        return Response(json.dumps(resp, default=str),
+                                    mimetype="application/json",
+                                    status=201)
     except mariadb.DataError:
         print("Something wrong with your data")
         return Response("Something wrong with your data",
@@ -152,67 +139,60 @@ def post_session():
     finally:
         cnnct_to_db.endConn()
 
-    resp = {
-        "sessionId": result[0],
-        "startedAt": result[1],
-        "sessionToken": result[2],
-        "completed": result[3],
-        "workoutId": result[5],
-        "userId": result[6]
-    }
-    return Response(json.dumps(resp, default=str),
-                                mimetype="application/json",
-                                status=201)
+def remove_session():
+    data = request.json
+    requirements = [
+        {   'name': 'loginToken',
+            'datatype': str,
+            'maxLength': 32,
+            'required': True
+        },
+        {   'name': 'userId',
+            'datatype': int,
+            'maxLength': 10,
+            'required': True
+        },
+        
+    ]
+    validate_data(requirements,data)
+    check_data_required(requirements,data)
 
-# def delete_session():
-#     data = request.json
-#     requirements = [
-#         {   'name': 'loginToken',
-#             'datatype': str,
-#             'maxLength': 32,
-#             'required': True
-#         },
-#     ]
-#     validate_data(requirements,data)
-#     check_data_required(requirements,data)
+    client_loginToken = data.get('loginToken')
+    client_userId = data.get('userId')
+    try:
+        cnnct_to_db = MariaDbConnection()
+        cnnct_to_db.connect()
 
-#     client_loginToken = data.get('loginToken')
-    
-#     try:
-#         cnnct_to_db = MariaDbConnection()
-#         cnnct_to_db.connect()
+        cnnct_to_db.cursor.execute("SELECT loginToken FROM user_session WHERE loginToken=?",[client_loginToken])
+        match = cnnct_to_db.cursor.fetchone()
+        #Only returns one row, so only one combination is valid
+        if match == None:
+            return Response("User login invalid",
+                            mimetype="plain/text",
+                            status=400)
 
-#         cnnct_to_db.cursor.execute("SELECT loginToken FROM user_session WHERE loginToken=?",[client_loginToken])
+        cnnct_to_db.cursor.execute("DELETE FROM workout_session WHERE user_id=? ",[client_userId])
+        cnnct_to_db.conn.commit()
 
-#         match = cnnct_to_db.cursor.fetchone()
-#         #Only returns one row, so only one combination is valid
-#         if match == None:
-#             return Response("Incorrect data was received",
-#                             mimetype="plain/text",
-#                             status=400)
+        return Response("Session Deleted",
+                        mimetype="text/plain",
+                        status=204)
+    except ConnectionError:
+        print("Error while attempting to connect to the database")
+        return Response("Error while attempting to connect to the database",
+                        mimetype="text/plain",
+                        status=444)  
+    except mariadb.DataError:
+        print("Something wrong with your data")
+        return Response("Something wrong with your data",
+                        mimetype="text/plain",
+                        status=400)
 
-#         cnnct_to_db.cursor.execute("DELETE FROM user_session WHERE loginToken=?", [match[0]])
-#         cnnct_to_db.conn.commit()
-#         return Response("Logged out successfully",
-#                         mimetype="text/plain",
-#                         status=204)
-#     except ConnectionError:
-#         print("Error while attempting to connect to the database")
-#         return Response("Error while attempting to connect to the database",
-#                         mimetype="text/plain",
-#                         status=444)  
-#     except mariadb.DataError:
-#         print("Something wrong with your data")
-#         return Response("Something wrong with your data",
-#                         mimetype="text/plain",
-#                         status=400)
-
-@app.route('/api/workout_session', methods=['POST', 'DELETE'])
+@app.route('/api/workout-session', methods=['POST', 'DELETE'])
 def workout_session_api():
     if (request.method == 'POST'):
         return post_session()
-        
     elif (request.method == 'DELETE'):
-        return delete_session()
+        return remove_session()
     else:
         print("Something went wrong with the login API.")

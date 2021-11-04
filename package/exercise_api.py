@@ -248,39 +248,39 @@ def post_exercises():
 
 def delete_exercise():
     data = request.json
-    requirements = [
-        {   'name': 'loginToken',
-            'datatype': str,
-            'maxLength': 32,
-            'required': True
-        },
-        {   
-            'name': 'exerciseId',
-            'datatype': int,
-            'maxLength': 2,
-            'required': True
-        },
-    ]
-    try:
-        check_data_required(requirements,data)
-        validate_data(requirements,data)
+    # requirements = [
+    #     {   'name': 'loginToken',
+    #         'datatype': str,
+    #         'maxLength': 32,
+    #         'required': True
+    #     },
+    #     {   
+    #         'name': 'exerciseId',
+    #         'datatype': int,
+    #         'maxLength': 2,
+    #         'required': True
+    #     },
+    # ]
+    # try:
+    #     check_data_required(requirements,data)
+    #     validate_data(requirements,data)
 
-    except RequiredDataNull:
-        return Response("Missing required data in your input!",
-                        mimetype="text/plain",
-                        status=400)
-    except TypeError:
-        return Response("Incorrect datatype was used",
-                        mimetype="text/plain",
-                        status=400)
-    except ValueError:
-        return Response("Please check your inputs. An error was found with your data",
-                        mimetype="text/plain",
-                        status=400)
-    except DataOutofBounds:
-        return Response("Please check your inputs. Data is out of bounds",
-                        mimetype="text/plain",
-                        status=400)
+    # except RequiredDataNull:
+    #     return Response("Missing required data in your input!",
+    #                     mimetype="text/plain",
+    #                     status=400)
+    # except TypeError:
+    #     return Response("Incorrect datatype was used",
+    #                     mimetype="text/plain",
+    #                     status=400)
+    # except ValueError:
+    #     return Response("Please check your inputs. An error was found with your data",
+    #                     mimetype="text/plain",
+    #                     status=400)
+    # except DataOutofBounds:
+    #     return Response("Please check your inputs. Data is out of bounds",
+    #                     mimetype="text/plain",
+    #                     status=400)
 
     client_loginToken = data.get('loginToken')
     client_exerciseId = data.get('exerciseId')
