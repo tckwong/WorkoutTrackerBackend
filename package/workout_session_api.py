@@ -173,7 +173,8 @@ def remove_session():
 
         cnnct_to_db.cursor.execute("DELETE FROM workout_session WHERE user_id=? ",[client_userId])
         cnnct_to_db.conn.commit()
-
+        cnnct_to_db.endConn()
+        
         return Response("Session Deleted",
                         mimetype="text/plain",
                         status=204)

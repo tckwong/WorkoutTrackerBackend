@@ -3,7 +3,6 @@ from flask import request, Response
 import mariadb
 import dbcreds
 import json
-import datetime
 
 class MariaDbConnection:    
     def __init__(self):
@@ -110,7 +109,6 @@ def get_exercises():
                         'sets' : result[3],
                         'weight' : result[4],
                         'workout_id' : result[5],
-                        'completed' : result[6],
                         'user_id' : result[7],
                         'workoutTitle': result[8]
                         }
@@ -128,7 +126,6 @@ def get_exercises():
 
 def post_exercises():
     data = request.json
-    print(data)
     # data is array object of dictionaries
     client_loginToken = data[0].get('loginToken')
     try:
@@ -158,7 +155,7 @@ def post_exercises():
             if (duplicates[index] == True):
                 continue
             else:
-                cnnct_to_db.cursor.execute("INSERT INTO exercise(exercise_name,reps,sets,weight,workout_id,completed,user_id) VALUES(?,?,?,?,?,?,?)",[data[index].get('exerciseName'),data[index].get('reps'),data[index].get('sets'),data[index].get('weight'),data[index].get('workoutId'),0,db_userId])
+                cnnct_to_db.cursor.execute("INSERT INTO exercise(exercise_name,reps,sets,weight,workout_id,user_id) VALUES(?,?,?,?,?,?)",[data[index].get('exerciseName'),data[index].get('reps'),data[index].get('sets'),data[index].get('weight'),data[index].get('workoutId'),db_userId])
                 if(cnnct_to_db.cursor.rowcount == 1):
                     cnnct_to_db.conn.commit()
                 else:
@@ -166,7 +163,7 @@ def post_exercises():
                                         mimetype="text/plain",
                                         status=400)
 
-        cnnct_to_db.cursor.execute("SELECT workout.id,exercise_name,reps,sets,weight,workout_id,exercise.user_id, exercise.completed FROM exercise INNER JOIN workout ON workout_id = workout.id WHERE workout.id=?",[data[0].get('workoutId')])
+        cnnct_to_db.cursor.execute("SELECT workout.id,exercise_name,reps,sets,weight,workout_id,exercise.user_id FROM exercise INNER JOIN workout ON workout_id = workout.id WHERE workout.id=?",[data[0].get('workoutId')])
         all_exercises_data = cnnct_to_db.cursor.fetchall()
         exercise_list = []
         content = {}
@@ -179,9 +176,9 @@ def post_exercises():
                     "weight" : result[4],
                     "workoutId" : result[5],
                     "userId" : result[6],
-                    
             }
             exercise_list.append(content)
+        
         return Response(json.dumps(exercise_list),
                                 mimetype="application/json",
                                 status=201)
@@ -203,84 +200,41 @@ def post_exercises():
     finally:
         cnnct_to_db.endConn()
 
-    # requirements = [
-    #     {   'name': 'loginToken',
-    #         'datatype': str,
-    #         'maxLength': 32,
-    #         'required': True
-    #     },
-    #     {   
-    #         'name': 'reps',
-    #         'datatype': int,
-    #         'maxLength': 10,
-    #         'required': False
-    #     },
-    #     {   
-    #         'name': 'sets',
-    #         'datatype': int,
-    #         'maxLength': 10,
-    #         'required': False
-    #     },
-    #     {   
-    #         'name': 'weight',
-    #         'datatype': int,
-    #         'maxLength': 10,
-    #         'required': False
-    #     },
-    #     {   
-    #         'name': 'completed',
-    #         'datatype': int,
-    #         'maxLength': 10,
-    #         'required': True
-    #     },
-    # ]
-
-    # validate_data(requirements,data)
-    # check_data_required(requirements,data)
-
-    # client_loginToken = data.get('loginToken')
-    # client_exercise_name = data.get('exerciseName')
-    # client_reps = data.get('reps')
-    # client_sets = data.get('sets')
-    # client_weight = data.get('weight')
-    # client_workout_id = data.get('workoutId')
-    # client_completed = data.get('completed')
-
 def delete_exercise():
     data = request.json
-    # requirements = [
-    #     {   'name': 'loginToken',
-    #         'datatype': str,
-    #         'maxLength': 32,
-    #         'required': True
-    #     },
-    #     {   
-    #         'name': 'exerciseId',
-    #         'datatype': int,
-    #         'maxLength': 2,
-    #         'required': True
-    #     },
-    # ]
-    # try:
-    #     check_data_required(requirements,data)
-    #     validate_data(requirements,data)
+    requirements = [
+        {   'name': 'loginToken',
+            'datatype': str,
+            'maxLength': 32,
+            'required': True
+        },
+        {   
+            'name': 'exerciseId',
+            'datatype': int,
+            'maxLength': 2,
+            'required': True
+        },
+    ]
+    try:
+        check_data_required(requirements,data)
+        validate_data(requirements,data)
 
-    # except RequiredDataNull:
-    #     return Response("Missing required data in your input!",
-    #                     mimetype="text/plain",
-    #                     status=400)
-    # except TypeError:
-    #     return Response("Incorrect datatype was used",
-    #                     mimetype="text/plain",
-    #                     status=400)
-    # except ValueError:
-    #     return Response("Please check your inputs. An error was found with your data",
-    #                     mimetype="text/plain",
-    #                     status=400)
-    # except DataOutofBounds:
-    #     return Response("Please check your inputs. Data is out of bounds",
-    #                     mimetype="text/plain",
-    #                     status=400)
+    except RequiredDataNull:
+        return Response("Missing required data in your input!",
+                        mimetype="text/plain",
+                        status=400)
+    except TypeError:
+        return Response("Incorrect datatype was used",
+                        mimetype="text/plain",
+                        status=400)
+    except ValueError:
+        return Response("Please check your inputs. An error was found with your data",
+                        mimetype="text/plain",
+                        status=400)
+    except DataOutofBounds:
+        return Response("Please check your inputs. Data is out of bounds",
+                        mimetype="text/plain",
+                        status=400)
 
     client_loginToken = data.get('loginToken')
     client_exerciseId = data.get('exerciseId')
@@ -289,19 +243,24 @@ def delete_exercise():
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
         # Select the exerciseId
-        cnnct_to_db.cursor.execute("SELECT exercise.id from user_session INNER JOIN user ON user_session.user_id = user.id INNER JOIN exercise ON exercise.user_id = user.id WHERE user_session.loginToken =? AND exercise.id=?", [client_loginToken,client_exerciseId])
-        id_match = cnnct_to_db.cursor.fetchone()
-        if id_match != None:
-            id_match = id_match[0]
-            cnnct_to_db.cursor.execute("DELETE FROM exercise WHERE id=?",[id_match])
-            if(cnnct_to_db.cursor.rowcount == 1):
-                cnnct_to_db.conn.commit()
-            else:
-                return Response("Failed to update",
+        #checkloginToken and get user Id
+        cnnct_to_db.cursor.execute("SELECT * FROM user_session WHERE user_session.loginToken =?", [client_loginToken])
+        session_match = cnnct_to_db.cursor.fetchone()
+        #check for a row match check if user is loggeds in
+        if session_match == None:
+            cnnct_to_db.endConn()
+            return Response("No login authenticated",
                                 mimetype="text/plain",
                                 status=400)
+
+        cnnct_to_db.cursor.execute("DELETE FROM exercise WHERE id=?",[client_exerciseId])
+        if(cnnct_to_db.cursor.rowcount == 1):
+            cnnct_to_db.conn.commit()
         else:
-            raise ValueError
+            cnnct_to_db.endConn()
+            return Response("Failed to update",
+                            mimetype="text/plain",
+                            status=400)
         
         cnnct_to_db.endConn()
         return Response("Sucessfully deleted exercise",
@@ -321,7 +280,7 @@ def delete_exercise():
                         status=400)
     except ValueError:
         cnnct_to_db.endConn()
-        print("Incorrect loginToken and password combination")
+        print("Incorrect loginToken and exerciseId combination")
         return Response("Incorrect loginToken and password combination",
                         mimetype="text/plain",
                         status=400)

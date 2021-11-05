@@ -7,5 +7,6 @@ import package.workout_api
 import package.exercise_api
 import package.current_workout_api
 import package.workout_session_api
+import package.workout_history_api
 
 

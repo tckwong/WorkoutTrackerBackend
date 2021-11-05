@@ -205,6 +205,7 @@ def logout_user():
         match = cnnct_to_db.cursor.fetchone()
         #Only returns one row, so only one combination is valid
         if match == None:
+            cnnct_to_db.endConn()
             return Response("Incorrect data was received",
                             mimetype="plain/text",
                             status=400)
@@ -215,11 +216,13 @@ def logout_user():
                         mimetype="text/plain",
                         status=204)
     except ConnectionError:
+        cnnct_to_db.endConn()
         print("Error while attempting to connect to the database")
         return Response("Error while attempting to connect to the database",
                         mimetype="text/plain",
                         status=444)  
     except mariadb.DataError:
+        cnnct_to_db.endConn()
         print("Something wrong with your data")
         return Response("Something wrong with your data",
                         mimetype="text/plain",
@@ -229,7 +232,6 @@ def logout_user():
 def login_api():
     if (request.method == 'POST'):
         return login_user()
-        
     elif (request.method == 'DELETE'):
         return logout_user()
     else:

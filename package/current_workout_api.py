@@ -82,7 +82,7 @@ def get_cur_workout():
     params_id = request.args.get("workoutId")
 
     if (params_id is None):
-        return Response(json.dumps("Please provide a 'workoutId'"),
+        return Response("Please provide a workoutId",
                                 mimetype="text/plain",
                                 status=400)
 
@@ -104,12 +104,12 @@ def get_cur_workout():
                 content = { 
                         'workoutId': result[5],
                         'exerciseId': result[0],
-                        'workoutTitle' : result[9],
+                        'workoutTitle' : result[8],
                         'exerciseName' : result[1],
                         'reps' : result[2],
                         'sets' : result[3],
                         'weight' : result[4],
-                        'created_on': result[10]
+                        'created_on': result[9]
                         }
                 list.append(content)
             cnnct_to_db.endConn()
@@ -125,8 +125,8 @@ def get_cur_workout():
 
 def post_current_workout():
     data = request.json
-    # data is array object of dictionaries
     print(data)
+    # data is array object of dictionaries
     client_loginToken = data[0].get('loginToken')
     # client_userId = data[0].get('userId')
     try:
