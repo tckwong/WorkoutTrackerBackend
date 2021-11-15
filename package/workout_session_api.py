@@ -13,9 +13,9 @@ class MariaDbConnection:
     def connect(self):
         self.conn = mariadb.connect(
         user=dbcreds.user, 
-        password=dbcreds.password, 
+        password=dbcreds.password,
         host=dbcreds.host,
-        port=dbcreds.port, 
+        port=dbcreds.port,
         database=dbcreds.database)
         self.cursor = self.conn.cursor()
 
@@ -69,12 +69,65 @@ def validate_data(mydict, data):
         else:
             raise ValueError
 
+def get_session():
+    params_id = request.args.get("userId")
+    if (params_id is None):
+        return Response("'GET' Api requires parameters",
+                                    mimetype="text/plain",
+                                    status=400)
+
+    elif (params_id is not None):
+        try:
+            cnnct_to_db = MariaDbConnection()
+            cnnct_to_db.connect()
+        except ConnectionError:
+            cnnct_to_db.endConn()
+            return Response("Error while attempting to connect to the database",
+                                        mimetype="text/plain",
+                                        status=400)
+        try:
+            params_id = int(request.args.get("userId"))
+        except ValueError:
+            cnnct_to_db.endConn()
+            return Response("Incorrect datatype received",
+                                        mimetype="text/plain",
+                                        status=400)
+    
+        if ((0< params_id<99999999)):
+            cnnct_to_db.cursor.execute("SELECT * FROM workout_session WHERE user_id =?", [params_id])
+            session_match = cnnct_to_db.cursor.fetchone()
+
+            if (session_match is not None):
+                content = {
+                        'id': session_match[0],
+                        'session_token': session_match[1],
+                        'startedAt': session_match[2],
+                        'workoutId': session_match[3],
+                        'userId' : session_match[4],
+                        }
+                cnnct_to_db.endConn()
+                return Response(json.dumps(content, default=str),
+                                    mimetype="application/json",
+                                    status=200)
+            else:
+                cnnct_to_db.endConn()
+                return Response(
+                                mimetype="text/plain",
+                                status=204)
+            
+        else:
+            cnnct_to_db.endConn()
+            return Response("Invalid parameters. ID Must be an integer",
+                                    mimetype="text/plain",
+                                    status=400)
+
 def post_session():
     data = request.json
     #Create a session token
     #Create Start Time
     client_loginToken = data.get('loginToken')
     client_workoutId = data.get('workoutId')
+    client_userId = data.get('userId')
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
@@ -111,18 +164,20 @@ def post_session():
     try:
         #get current date and time
         started_at = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        cnnct_to_db.cursor.execute("INSERT INTO workout_session(started_at,session_token,user_id) VALUES(?,?,?)",[started_at,generateUuid,data.get('userId')])
+        cnnct_to_db.cursor.execute("INSERT INTO workout_session(started_at,session_token,workout_id,user_id) VALUES(?,?,?,?)",[started_at,generateUuid,client_workoutId,client_userId])
         cnnct_to_db.conn.commit()
 
-        cnnct_to_db.cursor.execute("SELECT * FROM workout_session WHERE user_id=? ORDER BY id DESC LIMIT 1",[data.get('userId')])
+        cnnct_to_db.cursor.execute("SELECT * FROM workout_session WHERE user_id=? ORDER BY id DESC LIMIT 1",[client_userId])
         result = cnnct_to_db.cursor.fetchone()
 
         resp = {
             "sessionId": result[0],
-            "startedAt": result[1],
-            "sessionToken": result[2],
+            "sessionToken": result[1],
+            "startedAt": result[2],
+            "workoutId": result[3],
             "userId": result[4]
         }
+
         return Response(json.dumps(resp, default=str),
                                     mimetype="application/json",
                                     status=201)
@@ -189,9 +244,11 @@ def remove_session():
                         mimetype="text/plain",
                         status=400)
 
-@app.route('/api/workout-session', methods=['POST', 'DELETE'])
+@app.route('/api/workout-session', methods=['GET', 'POST', 'DELETE'])
 def workout_session_api():
-    if (request.method == 'POST'):
+    if (request.method == 'GET'):
+        return get_session()
+    elif (request.method == 'POST'):
         return post_session()
     elif (request.method == 'DELETE'):
         return remove_session()

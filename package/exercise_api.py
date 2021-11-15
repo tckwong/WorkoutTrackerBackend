@@ -200,8 +200,43 @@ def post_exercises():
     finally:
         cnnct_to_db.endConn()
 
+def update_exercises():
+    data = request.json
+
+    # client_workoutTitle = data.get('workoutTitle')
+    client_exerciseName = data.get('exerciseName')
+    client_oldExerciseName = data.get('oldExerciseName')
+    print(client_exerciseName)
+    print(client_oldExerciseName)
+    try:
+        cnnct_to_db = MariaDbConnection()
+        cnnct_to_db.connect()
+
+    except ConnectionError:
+        print("Error while attempting to connect to the database")
+        return Response("Error while attempting to connect to the database",
+                        mimetype="text/plain",
+                        status=444)  
+
+    cnnct_to_db.cursor.execute("UPDATE exercise SET exercise_name =? WHERE exercise_name=?",[client_exerciseName,client_oldExerciseName])
+    # Update all rows
+    # Update completed info as well
+    cnnct_to_db.cursor.execute("UPDATE completed_exercises SET exercise_name =? WHERE exercise_name=?",[client_exerciseName,client_oldExerciseName])
+    cnnct_to_db.conn.commit()
+    cnnct_to_db.cursor.execute("SELECT exercise_name FROM exercise WHERE exercise_name=?", [client_exerciseName])
+    updated_name = cnnct_to_db.cursor.fetchone()
+
+    cnnct_to_db.endConn()
+    resp={
+        "exerciseName" : updated_name
+    }
+    return Response(json.dumps(resp),
+                    mimetype="application/json",
+                    status=200)
+
 def delete_exercise():
     data = request.json
+    print(data)
     requirements = [
         {   'name': 'loginToken',
             'datatype': str,
@@ -292,7 +327,7 @@ def exercise_api():
     elif (request.method == 'POST'):
         return post_exercises()
     elif (request.method == 'PATCH'):
-        pass
+        return update_exercises()
     elif (request.method == 'DELETE'):
         return delete_exercise()
     else:

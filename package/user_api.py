@@ -176,7 +176,6 @@ def create_new_user():
     # Salt and hash password before inserting into DB
     salt_pw = bcrypt.gensalt()
     hashed_client_password = bcrypt.hashpw(client_password.encode(), salt_pw)
-    print(hashed_client_password)
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()

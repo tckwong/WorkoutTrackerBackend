@@ -159,7 +159,7 @@ def post_workout():
         cnnct_to_db.connect()
 
         #checkloginToken and get user Id
-        cnnct_to_db.cursor.execute("SELECT user.id,title,created_on from user_session INNER JOIN user ON user_session.user_id = user.id INNER JOIN workout ON workout.user_id = user.id WHERE user_session.loginToken =?", [client_loginToken])
+        cnnct_to_db.cursor.execute("SELECT user.id from user_session INNER JOIN user ON user_session.user_id = user.id WHERE user_session.loginToken =?", [client_loginToken])
         session_match = cnnct_to_db.cursor.fetchone()
         #check for a row match check if user is loggeds in
         if session_match == None:
@@ -168,7 +168,7 @@ def post_workout():
                                 status=400)
         
         db_userId = session_match[0]
-
+        print(db_userId)
         #get current date
         cur_date = datetime.datetime.now().strftime('%Y-%m-%d')
 
@@ -213,12 +213,14 @@ def patch_workout():
 
     client_loginToken = data.get('loginToken')
     client_workoutId = data.get('workoutId')
-    client_title = data.get('title')
+    client_workoutTitle = data.get('workoutTitle')
+    client_userId = data.get('userId')
     
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
         #Check for workout ownership
+        
         cnnct_to_db.cursor.execute("SELECT user.id,title,created_on from user_session INNER JOIN user ON user_session.user_id = user.id INNER JOIN workout ON workout.user_id = user.id WHERE user_session.loginToken =? AND workout.id=?", [client_loginToken,client_workoutId])
         info_match = cnnct_to_db.cursor.fetchone()
         if not info_match:
@@ -229,8 +231,8 @@ def patch_workout():
 
         for key in data:
             if (key != 'loginToken' and key != 'workoutId'):
-                if (key == "title"):
-                    cnnct_to_db.cursor.execute("UPDATE workout SET title=? WHERE id=?",[client_title,client_workoutId])
+                if (key == "workoutTitle"):
+                    cnnct_to_db.cursor.execute("UPDATE workout SET title=? WHERE id=? AND user_id=?",[client_workoutTitle,client_workoutId,client_userId])
                 else:
                     print("Error happened with inputs")
 
@@ -249,6 +251,7 @@ def patch_workout():
         resp = {
             "workoutId" : updated_workout[0],
             "title" : updated_workout[1],
+            "userId" : updated_workout[3]
         }
         return Response(json.dumps(resp),
                         mimetype="application/json",

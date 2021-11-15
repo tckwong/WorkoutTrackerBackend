@@ -68,7 +68,7 @@ def validate_data(mydict, data):
         else:
             raise ValueError
 
-def get_workout_history():
+def get_workout_progress():
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
@@ -77,7 +77,8 @@ def get_workout_history():
         return Response("Error while attempting to connect to the database",
                                     mimetype="text/plain",
                                     status=400)
-    params_id = request.args.get("userId")
+    params_id = request.args
+    print(params_id)
 
     if (params_id is None):
         cnnct_to_db.endConn()
@@ -86,62 +87,25 @@ def get_workout_history():
                                 status=400)
 
     elif (params_id is not None):
-        try:
-            params_id = int(request.args.get("userId"))
-        except ValueError:
-            cnnct_to_db.endConn()
-            return Response("Incorrect datatype received",
-                                        mimetype="text/plain",
-                                        status=400)
-    
-        if ((0< params_id<9999999)):
-            cnnct_to_db.cursor.execute("SELECT * FROM completed_workouts INNER JOIN completed_exercises ON completed_exercises.completed_workout_id = completed_workouts.id WHERE completed_workouts.user_id =?", [params_id])
-            workoutList = cnnct_to_db.cursor.fetchall()
+        cnnct_to_db.cursor.execute("SELECT exercise_name,weight,completed_at FROM completed_exercises INNER JOIN completed_workouts ON completed_exercises.completed_workout_id=completed_workouts.id WHERE completed_exercises.user_id =? AND exercise_name=?", [params_id.get('userId'),params_id.get('exerciseName')])
+        exerciseList = cnnct_to_db.cursor.fetchall()
+        list = []
+        content = {}
+        for result in exerciseList:
+            content = { 'exerciseName': result[0],
+                        'weight': result[1],
+                        'completedAt' : result[2]
+                    }
+            list.append(content)
 
-            newList = []
-            for count, value in enumerate(workoutList):
-                newTuple = (workoutList[count][9],)
-                newList += newTuple
-
-            dict_of_counts = {item:newList.count(item) for item in newList}
-            listofCounts = dict_of_counts.values()
-            final_list = list(listofCounts)
-
-            i = 0
-            appendedList = []
-            for count, value in enumerate(final_list):
-                resultDict = {
-                "workoutTitle" : [],
-                "completedAt" : [],
-                "exerciseName" : [],
-                "reps":[],
-                "sets":[],
-                "weight":[],
-            }
-
-                for reps in range(value):
-                    resultDict["workoutTitle"].append(workoutList[i][1])
-                    resultDict["completedAt"].append(workoutList[i][2])
-                    resultDict["exerciseName"].append(workoutList[i][5])
-                    resultDict["reps"].append(workoutList[i][6])
-                    resultDict["sets"].append(workoutList[i][7])
-                    resultDict["weight"].append(workoutList[i][8])
-                    i+=1
-                appendedList.append(resultDict)
-            cnnct_to_db.endConn()
-        else:
-            cnnct_to_db.endConn()
-            return Response("Invalid parameters. ID Must be an integer",
-                                    mimetype="text/plain",
-                                    status=400)
-
-        return Response(json.dumps(appendedList, default=str),
+        cnnct_to_db.endConn()
+        return Response(json.dumps(list, default=str),
                                     mimetype="application/json",
                                     status=200)
 
-@app.route('/api/workout-history', methods=['GET','DELETE'])
-def workout_history_api():
+@app.route('/api/workout-progress', methods=['GET','DELETE'])
+def workout_progress_api():
     if (request.method == 'GET'):
-        return get_workout_history()
+        return get_workout_progress()
     else:
         print("Something went wrong with the login API.")
