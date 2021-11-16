@@ -202,12 +202,6 @@ def post_exercises():
 
 def update_exercises():
     data = request.json
-
-    # client_workoutTitle = data.get('workoutTitle')
-    client_exerciseName = data.get('exerciseName')
-    client_oldExerciseName = data.get('oldExerciseName')
-    print(client_exerciseName)
-    print(client_oldExerciseName)
     try:
         cnnct_to_db = MariaDbConnection()
         cnnct_to_db.connect()
@@ -218,25 +212,34 @@ def update_exercises():
                         mimetype="text/plain",
                         status=444)  
 
-    cnnct_to_db.cursor.execute("UPDATE exercise SET exercise_name =? WHERE exercise_name=?",[client_exerciseName,client_oldExerciseName])
-    # Update all rows
-    # Update completed info as well
-    cnnct_to_db.cursor.execute("UPDATE completed_exercises SET exercise_name =? WHERE exercise_name=?",[client_exerciseName,client_oldExerciseName])
-    cnnct_to_db.conn.commit()
-    cnnct_to_db.cursor.execute("SELECT exercise_name FROM exercise WHERE exercise_name=?", [client_exerciseName])
-    updated_name = cnnct_to_db.cursor.fetchone()
+    for key in data:
+        if (key != 'loginToken') and (key != 'workoutId') and (key != 'oldExerciseName') and (key != 'userId') and (key != 'exerciseId'):
+            if (key == "reps"):
+                cnnct_to_db.cursor.execute("UPDATE exercise SET reps=? WHERE workout_id=? AND id=?",[data['reps'],data['workoutId'],data['exerciseId']])
+            elif (key == "sets"):
+                cnnct_to_db.cursor.execute("UPDATE exercise SET sets=? WHERE workout_id=? AND id=?",[data['sets'],data['workoutId'],data['exerciseId']])
+            elif (key == "weight"):
+                cnnct_to_db.cursor.execute("UPDATE exercise SET weight=? WHERE workout_id=? AND id=?",[data['weight'],data['workoutId'],data['exerciseId']])
+            elif (key == "newExerciseName"):
+                cnnct_to_db.cursor.execute("UPDATE exercise SET exercise_name =? WHERE workout_id=? AND id=?",[data['newExerciseName'],data['workoutId'],data['exerciseId']])
+                # Update completed info as well
+                cnnct_to_db.cursor.execute("UPDATE completed_exercises SET exercise_name=? WHERE user_id=? AND exercise_name=?",[data['newExerciseName'],data['userId'],data['oldExerciseName']])
+            else:
+                print("Error happened with inputs")
 
+            cnnct_to_db.conn.commit()
+        else:
+            continue
+    # commit all changes
+    cnnct_to_db.conn.commit()
     cnnct_to_db.endConn()
-    resp={
-        "exerciseName" : updated_name
-    }
-    return Response(json.dumps(resp),
-                    mimetype="application/json",
-                    status=200)
+
+    return Response("Success",
+                    mimetype="text/plain",
+                    status=204)
 
 def delete_exercise():
     data = request.json
-    print(data)
     requirements = [
         {   'name': 'loginToken',
             'datatype': str,

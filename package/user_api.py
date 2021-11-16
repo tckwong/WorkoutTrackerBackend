@@ -3,7 +3,6 @@ import mariadb
 import json
 import dbcreds
 from package import app
-import datetime
 import bcrypt
 
 class MariaDbConnection:    
@@ -107,7 +106,7 @@ def get_users():
                                         status=400)
     
         if ((0< params_id<99999999)):
-            cnnct_to_db.cursor.execute("SELECT * FROM user WHERE id =?", [params_id])
+            cnnct_to_db.cursor.execute("SELECT * FROM user WHERE id=?", [params_id])
             userIdMatch = cnnct_to_db.cursor.fetchall()
             user_list = []
             content = {}

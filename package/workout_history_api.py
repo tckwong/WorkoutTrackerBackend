@@ -97,16 +97,19 @@ def get_workout_history():
         if ((0< params_id<9999999)):
             cnnct_to_db.cursor.execute("SELECT * FROM completed_workouts INNER JOIN completed_exercises ON completed_exercises.completed_workout_id = completed_workouts.id WHERE completed_workouts.user_id =?", [params_id])
             workoutList = cnnct_to_db.cursor.fetchall()
-
+            # First I made a list of tuples with 
             newList = []
             for count, value in enumerate(workoutList):
+                # Tuple of completed_workout_ids
                 newTuple = (workoutList[count][9],)
                 newList += newTuple
-
+            # Creating my dictionary that stores the count of each number of rows pertaining to each completed workoutId
             dict_of_counts = {item:newList.count(item) for item in newList}
+
+            # converting into a list
             listofCounts = dict_of_counts.values()
             final_list = list(listofCounts)
-
+    
             i = 0
             appendedList = []
             for count, value in enumerate(final_list):
@@ -128,6 +131,7 @@ def get_workout_history():
                     resultDict["weight"].append(workoutList[i][8])
                     i+=1
                 appendedList.append(resultDict)
+                
             cnnct_to_db.endConn()
         else:
             cnnct_to_db.endConn()
@@ -139,7 +143,7 @@ def get_workout_history():
                                     mimetype="application/json",
                                     status=200)
 
-@app.route('/api/workout-history', methods=['GET','DELETE'])
+@app.route('/api/workout-history', methods=['GET'])
 def workout_history_api():
     if (request.method == 'GET'):
         return get_workout_history()

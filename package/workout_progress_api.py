@@ -78,7 +78,6 @@ def get_workout_progress():
                                     mimetype="text/plain",
                                     status=400)
     params_id = request.args
-    print(params_id)
 
     if (params_id is None):
         cnnct_to_db.endConn()

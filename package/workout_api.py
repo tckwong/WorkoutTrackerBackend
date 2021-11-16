@@ -150,7 +150,6 @@ def post_workout():
     validate_data(requirements,data)
     check_data_required(requirements,data)
         
-
     client_loginToken = data.get('loginToken')
     client_title = data.get('title')
 
