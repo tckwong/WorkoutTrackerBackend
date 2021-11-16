@@ -100,18 +100,19 @@ def get_workout_history():
             # First I made a list of tuples with 
             newList = []
             for count, value in enumerate(workoutList):
-                # Tuple of completed_workout_ids
+                # Tuple of completed_workout_ids - the unique identifier in the data
                 newTuple = (workoutList[count][9],)
                 newList += newTuple
             # Creating my dictionary that stores the count of each number of rows pertaining to each completed workoutId
             dict_of_counts = {item:newList.count(item) for item in newList}
 
-            # converting into a list
+            # converting the tuples into a plain list
             listofCounts = dict_of_counts.values()
             final_list = list(listofCounts)
     
             i = 0
             appendedList = []
+            # Value is the number of exercises per workout
             for count, value in enumerate(final_list):
                 resultDict = {
                 "workoutTitle" : [],
@@ -120,9 +121,9 @@ def get_workout_history():
                 "reps":[],
                 "sets":[],
                 "weight":[],
-            }
-
-                for reps in range(value):
+            }   
+                # Inner loop loops through the length of value being the number of exercises
+                for reps1 in range(value):
                     resultDict["workoutTitle"].append(workoutList[i][1])
                     resultDict["completedAt"].append(workoutList[i][2])
                     resultDict["exerciseName"].append(workoutList[i][5])

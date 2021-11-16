@@ -150,7 +150,7 @@ def post_exercises():
             list_all_exercises.append(i[0])
         newllst= [dict['exerciseName'] for dict in data]
         duplicates = [item in list_all_exercises for item in newllst]
-
+        print(duplicates)
         for index in range(len(duplicates)):
             if (duplicates[index] == True):
                 continue
